@@ -33,18 +33,18 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Verify npm auth
-        run: npm whoami
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Create release PR or publish
+      - name: Create version PR
+        id: changesets
         uses: changesets/action@v1
         with:
-          publish: npm publish --access public -w packages/core-ts
           version: npx changeset version
           commit: 'chore(release): version packages'
           title: 'chore(release): version packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to npm
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        run: npm publish --access public -w packages/core-ts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
