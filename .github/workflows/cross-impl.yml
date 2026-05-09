@@ -1,0 +1,49 @@
+name: cross-impl parity
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/core-ts/**'
+      - 'packages/core-py/**'
+      - 'packages/test-corpus/**'
+      - 'docs/format-spec.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  parity:
+    name: TS vs Python on shared corpus
+    runs-on: ubuntu-latest
+    # Python implementation lands in v0.2; this job is a no-op until then.
+    if: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install TS
+        run: npm ci
+
+      - name: Install Python
+        working-directory: packages/core-py
+        run: python -m pip install -e .
+
+      - name: Run TS exporter on corpus
+        run: node scripts/run-corpus.js --impl=ts --out=/tmp/ts-out
+
+      - name: Run Python exporter on corpus
+        run: python -m sql_md_sync.cli export-corpus --out=/tmp/py-out
+
+      - name: Compare outputs
+        run: diff -ur /tmp/ts-out /tmp/py-out
