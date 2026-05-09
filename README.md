@@ -1,10 +1,12 @@
 # sql-md-sync
 
-> Every git commit automatically snapshots your SQLite database as readable Markdown. Diff rows like code, review data in PRs, use Git as your single source of truth.
+> SQLite for your app, Markdown for your git history. One file per row, diffable, readable by humans and agents alike.
 
 [![CI](https://github.com/jindraregal/sql-md-sync/actions/workflows/ci.yml/badge.svg)](https://github.com/jindraregal/sql-md-sync/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/sql-md-sync.svg)](https://www.npmjs.com/package/sql-md-sync)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
+Built for personal apps and AI-coded projects: you want the speed and query power of SQLite at runtime, but you also want your data backed up in plain text, visible in git diffs, and readable without any special tooling. Every commit becomes a snapshot. If your DB gets corrupted or an agent writes bad data, you can restore any row from git history. If you want to understand what changed, `git log data/` tells you exactly which rows were touched and how.
 
 ## Setup
 
@@ -48,7 +50,7 @@ your-project/
         └── 0001-hello-world.md
 ```
 
-Each row is a plain file. Git diffs show exactly which fields changed. PRs show data changes alongside code. AI agents can read and edit individual rows without SQL tooling.
+Each row is a plain file. Git diffs show exactly which fields changed. AI agents can read, inspect, and reason about individual rows using standard file tools — no SQL client needed. And because it's just files in git, you get free backups, free history, and free restore.
 
 ## Why bother vs `sqlite3 .dump`
 
