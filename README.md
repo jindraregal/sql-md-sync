@@ -14,25 +14,6 @@
 
 The Markdown projection also makes the data **legible to language models**. A `sqlite3 .dump` produces one massive block of `INSERT` statements with no structure an LLM can navigate; a Markdown tree gives each record its own file with named fields and prose-formatted text columns, so an AI agent can read, reason about, and edit individual rows without needing SQL tooling or context about the entire database at once.
 
-## Feature support
-
-| Feature | Supported | Notes |
-|---|---|---|
-| Export SQLite to Markdown | yes | row-per-file, YAML frontmatter |
-| Import Markdown to SQLite | yes | byte-stable round-trip |
-| Round-trip validation | yes | `validate --round-trip` rebuilds a temp DB and diffs |
-| Git-diffable row changes | yes | one file per row |
-| Auto commit message generation | yes | `commit --stage --print` |
-| Status report | yes | shows added/modified/deleted rows |
-| BLOB columns | yes | binary or base64 sidecar files |
-| Configurable body columns | yes | long text / multiline columns become `# heading` sections |
-| Schema fingerprint check | yes | detects schema drift between exports |
-| Cross-file relationship links | no | FK values are stored as plain scalars in frontmatter, not as Markdown links to other row files |
-| Circular FK dependency detection | no | cyclic foreign-key schemas are not detected; import may fail with a constraint error |
-| Real-time sync / file watcher | no | push-based only |
-| Automatic schema migration | no | edit `_schema/*.sql` manually; the importer applies it |
-| Conflict resolution | no | Git merge conflicts on row files are resolved by hand |
-
 ## 30-second pitch
 
 ```bash
@@ -154,6 +135,25 @@ For databases up to ~100k rows the per-file overhead is negligible. Above that, 
 | git-lfs + `.db` | The binary | no | yes | n/a |
 
 `sql-md-sync` covers the case where you want plain Markdown in your repo *and* plain SQLite tooling at runtime, without inventing a new database engine or storage backend.
+
+## Feature support
+
+| Feature | | Notes |
+|---|---|---|
+| Export SQLite to Markdown | ✅ | row-per-file, YAML frontmatter |
+| Import Markdown to SQLite | ✅ | byte-stable round-trip |
+| Round-trip validation | ✅ | `validate --round-trip` rebuilds a temp DB and diffs |
+| Git-diffable row changes | ✅ | one file per row |
+| Auto commit message generation | ✅ | `commit --stage --print` |
+| Status report | ✅ | shows added/modified/deleted rows |
+| BLOB columns | ✅ | binary or base64 sidecar files |
+| Configurable body columns | ✅ | long text / multiline columns become `# heading` sections |
+| Schema fingerprint check | ✅ | detects schema drift between exports |
+| Cross-file relationship links | ❌ | FK values are stored as plain scalars in frontmatter, not as Markdown links to other row files |
+| Circular FK dependency detection | ❌ | cyclic foreign-key schemas are not detected; import may fail with a constraint error |
+| Real-time sync / file watcher | ❌ | push-based only |
+| Automatic schema migration | ❌ | edit `_schema/*.sql` manually; the importer applies it |
+| Conflict resolution | ❌ | Git merge conflicts on row files are resolved by hand |
 
 ## Limitations
 
