@@ -1,0 +1,18 @@
+# Force LF line endings on all text files for round-trip determinism.
+* text=auto eol=lf
+
+*.md text eol=lf
+*.sql text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.ts text eol=lf
+*.js text eol=lf
+*.py text eol=lf
+
+# BLOB sidecars
+*.bin binary
+*.b64 text eol=lf
+
+# Test corpus snapshots — never auto-convert
+packages/test-corpus/** -text
