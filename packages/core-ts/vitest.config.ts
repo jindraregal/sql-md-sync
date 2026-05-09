@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     globals: false,
     environment: 'node',
+    pool: 'forks',
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'json-summary'],
