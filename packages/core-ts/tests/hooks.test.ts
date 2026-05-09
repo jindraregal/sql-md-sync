@@ -29,12 +29,16 @@ describe('install-hook command', () => {
     expect(content).toContain('test.db');
   });
 
-  it('hook file is executable', async () => {
+  it('hook file is executable (unix only)', async () => {
     await init({ dir: tmpdir, dbPath: './test.db' });
     installHook({ dir: tmpdir });
     const hookFile = path.join(tmpdir, '.git', 'hooks', 'pre-commit');
     const stat = fs.statSync(hookFile);
-    expect(stat.mode & 0o111).toBeGreaterThan(0);
+    if (process.platform !== 'win32') {
+      expect(stat.mode & 0o111).toBeGreaterThan(0);
+    } else {
+      expect(fs.existsSync(hookFile)).toBe(true);
+    }
   });
 
   it('throws when not in a git repo', () => {
