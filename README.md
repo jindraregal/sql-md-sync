@@ -8,6 +8,29 @@
 [![Node](https://img.shields.io/node/v/sql-md-sync.svg)](https://www.npmjs.com/package/sql-md-sync)
 [![npm downloads](https://img.shields.io/npm/dm/sql-md-sync.svg)](https://www.npmjs.com/package/sql-md-sync)
 
+## Purpose
+
+`sql-md-sync` exists to give AI-built applications a single source of truth that is both human-readable and machine-queryable. AI agents frequently generate and mutate structured data in SQLite; without this tool that data lives in an opaque binary that no reviewer can audit and no Git workflow can protect. By projecting every row as a committed Markdown file, the schema and data become the canonical artifact, not just a runtime detail. A pre-commit hook or CI step validates the projection before anything reaches `main`, so the repository is always in a provably consistent state.
+
+## Feature support
+
+| Feature | Supported | Notes |
+|---|---|---|
+| Export SQLite to Markdown | yes | row-per-file, YAML frontmatter |
+| Import Markdown to SQLite | yes | byte-stable round-trip |
+| Round-trip validation | yes | `validate --round-trip` rebuilds a temp DB and diffs |
+| Git-diffable row changes | yes | one file per row |
+| Auto commit message generation | yes | `commit --stage --print` |
+| Status report | yes | shows added/modified/deleted rows |
+| BLOB columns | yes | binary or base64 sidecar files |
+| Configurable body columns | yes | long text / multiline columns become `# heading` sections |
+| Schema fingerprint check | yes | detects schema drift between exports |
+| Cross-file relationship links | no | FK values are stored as plain scalars in frontmatter, not as Markdown links to other row files |
+| Circular FK dependency detection | no | cyclic foreign-key schemas are not detected; import may fail with a constraint error |
+| Real-time sync / file watcher | no | push-based only |
+| Automatic schema migration | no | edit `_schema/*.sql` manually; the importer applies it |
+| Conflict resolution | no | Git merge conflicts on row files are resolved by hand |
+
 ## 30-second pitch
 
 ```bash
