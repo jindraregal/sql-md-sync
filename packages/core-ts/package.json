@@ -1,0 +1,68 @@
+{
+  "name": "sql-md-sync",
+  "version": "0.1.0",
+  "description": "Bidirectional SQLite <-> Markdown sync CLI for git-diffable database history",
+  "license": "MIT",
+  "author": "Jindřich Regál <jindrich.regal@gmail.com>",
+  "homepage": "https://github.com/jindraregal/sql-md-sync#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jindraregal/sql-md-sync.git",
+    "directory": "packages/core-ts"
+  },
+  "bugs": {
+    "url": "https://github.com/jindraregal/sql-md-sync/issues"
+  },
+  "keywords": [
+    "sqlite",
+    "markdown",
+    "git",
+    "sync",
+    "database",
+    "version-control",
+    "yaml",
+    "frontmatter"
+  ],
+  "type": "module",
+  "bin": {
+    "sql-md-sync": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.3",
+    "commander": "^12.1.0",
+    "gray-matter": "^4.0.3",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.14.0",
+    "tsx": "^4.15.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

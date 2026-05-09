@@ -1,13 +1,22 @@
 export interface TableConfig {
   pk: string;
   bodyColumns: string[];
+  displayColumn?: string;
+  excludeColumns?: string[];
 }
+
+export type BlobEncoding = 'binary_sidecar' | 'base64_sidecar';
 
 export interface SyncConfig {
   version: number;
   largeTextThreshold: number;
   tables: Record<string, TableConfig>;
   schemaFingerprint: string;
+  dbPath?: string;
+  dataDir?: string;
+  schemaDir?: string;
+  blobEncoding?: BlobEncoding;
+  commitTemplate?: string;
 }
 
 export interface ColumnInfo {
