@@ -5,7 +5,7 @@ export { diff, formatDiff } from './diff.js';
 export { init } from './init.js';
 export { status } from './status.js';
 export { generateCommitMessage, readStagedDiff } from './commit.js';
-export { rowToMarkdown, markdownToRow, detectBodyColumns } from './serialize.js';
+export { rowToMarkdown, markdownToRow, detectBodyColumns, NULL_MARKER } from './serialize.js';
 export { makeSlug, buildFilename, uniqueSlug, padWidth } from './slug.js';
 export {
   SqlMdSyncError,
@@ -22,3 +22,4 @@ export type { InitOptions } from './init.js';
 export type { StatusOptions, StatusReport } from './status.js';
 export type { CommitSummary, TableChange } from './commit.js';
 export type { SyncConfig, TableConfig, ColumnInfo, IndexInfo, TableMeta, RowData } from './types.js';
+export type { ColumnMapping } from './schema.js';

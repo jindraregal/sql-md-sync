@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import Database from 'better-sqlite3';
-import { getTableNames, getColumns, getPkColumn, getIndexes, writeSchemaFiles } from './schema.js';
+import { getTableNames, getColumns, getPkColumn, getIndexes, writeSchemaFiles, writeColumnMapping } from './schema.js';
 import { detectBodyColumns, rowToMarkdown } from './serialize.js';
 import { makeSlug, buildFilename, uniqueSlug, padWidth } from './slug.js';
 import { readConfig, writeConfig, defaultConfig, fingerprintSchema } from './config.js';
@@ -96,6 +96,12 @@ export async function exportDb(opts: ExportOptions): Promise<void> {
       slugCol = textCols[0]?.name ?? null;
     }
 
+    // Write column-to-section mapping (spec §4.2)
+    writeColumnMapping(out, table, {
+      bodyColumns,
+      ...(slugCol ? { displayColumn: slugCol } : {}),
+    });
+
     const usedSlugs = new Set<string>();
     const maxId = rows.reduce((max, r) => {
       const v = Number(r[pkCol]);
@@ -109,7 +115,8 @@ export async function exportDb(opts: ExportOptions): Promise<void> {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const slugBase = makeSlug(slugCol ? row[slugCol] : row[pkCol]);
-      const slug = uniqueSlug(slugBase, usedSlugs);
+      // Pass PK value as hash source so colliding slugs get stable, distinct suffixes
+      const slug = uniqueSlug(slugBase, usedSlugs, row[pkCol]);
       const idx = Number(row[pkCol]);
       const filenameIndex = Number.isFinite(idx) && idx > 0 ? idx : i + 1;
       const filename = buildFilename(filenameIndex, slug, padW);

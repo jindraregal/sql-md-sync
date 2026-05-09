@@ -76,3 +76,30 @@ export function readSchemaFiles(outDir: string): Record<string, string> {
   }
   return result;
 }
+
+// ─── Column-to-section mapping (spec §4.2) ────────────────────────────────────
+
+export interface ColumnMapping {
+  bodyColumns: string[];
+  displayColumn?: string;
+  excludeColumns?: string[];
+}
+
+export function writeColumnMapping(
+  outDir: string,
+  table: string,
+  mapping: ColumnMapping
+): void {
+  const schemaDir = path.join(outDir, '_schema');
+  fs.mkdirSync(schemaDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(schemaDir, `${table}.columns.json`),
+    JSON.stringify(mapping, null, 2) + '\n'
+  );
+}
+
+export function readColumnMapping(outDir: string, table: string): ColumnMapping | null {
+  const filePath = path.join(outDir, '_schema', `${table}.columns.json`);
+  if (!fs.existsSync(filePath)) return null;
+  return JSON.parse(fs.readFileSync(filePath, 'utf8')) as ColumnMapping;
+}
