@@ -1,6 +1,6 @@
 {
   "name": "sql-md-sync",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Bidirectional SQLite <-> Markdown sync CLI for git-diffable database history",
   "license": "MIT",
   "author": "Jindřich Regál <jindrich.regal@gmail.com>",
