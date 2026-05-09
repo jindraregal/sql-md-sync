@@ -9,6 +9,7 @@ import { diff, formatDiff } from './diff.js';
 import { init } from './init.js';
 import { status as statusCmd } from './status.js';
 import { generateCommitMessage, readStagedDiff } from './commit.js';
+import { installHook } from './hooks.js';
 
 const program = new Command();
 
@@ -158,6 +159,20 @@ program
       execSync(`git commit -m ${JSON.stringify(msg)}`, { cwd: repo, stdio: 'inherit' });
     } catch (e) {
       console.error('git commit failed:', e instanceof Error ? e.message : e);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('install-hook')
+  .description('Install a git pre-commit hook that auto-exports the database before every commit')
+  .option('--db <path>', 'Path to SQLite database (overrides dbPath in .sqlmdsync.json)')
+  .option('--dir <path>', 'Repository root', '.')
+  .action((opts) => {
+    try {
+      installHook({ dir: path.resolve(opts.dir), db: opts.db });
+    } catch (e) {
+      console.error('install-hook failed:', e instanceof Error ? e.message : e);
       process.exit(1);
     }
   });

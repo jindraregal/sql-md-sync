@@ -3,6 +3,7 @@ export { importMd } from './import.js';
 export { validate, validateRoundTrip } from './validate.js';
 export { diff, formatDiff } from './diff.js';
 export { init } from './init.js';
+export { installHook } from './hooks.js';
 export { status } from './status.js';
 export { generateCommitMessage, readStagedDiff } from './commit.js';
 export { rowToMarkdown, markdownToRow, detectBodyColumns, NULL_MARKER } from './serialize.js';
@@ -19,6 +20,7 @@ export type { ImportOptions } from './import.js';
 export type { ValidationResult, RoundTripResult } from './validate.js';
 export type { DiffOptions, DiffResult } from './diff.js';
 export type { InitOptions } from './init.js';
+export type { InstallHookOptions } from './hooks.js';
 export type { StatusOptions, StatusReport } from './status.js';
 export type { CommitSummary, TableChange } from './commit.js';
 export type {
