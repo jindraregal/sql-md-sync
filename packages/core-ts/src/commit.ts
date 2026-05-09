@@ -10,6 +10,8 @@ export interface TableChange {
 export interface CommitSummary {
   tables: Record<string, TableChange>;
   schemaChanges: Record<string, 'added' | 'modified' | 'deleted'>;
+  // field-level detail for single-file diffs: table -> slug -> changed field name
+  fieldChange?: { table: string; slug: string; field: string };
 }
 
 function runGit(args: string[], cwd: string): string {
@@ -21,8 +23,79 @@ function runGit(args: string[], cwd: string): string {
     });
   } catch (e) {
     const err = e as { stderr?: Buffer | string; message?: string };
-    const stderr = err.stderr ? err.stderr.toString() : err.message ?? '';
+    const stderr = err.stderr ? err.stderr.toString() : (err.message ?? '');
     throw new Error(`git ${args.join(' ')} failed: ${stderr}`);
+  }
+}
+
+// Parse a unified diff hunk and return the set of changed YAML frontmatter keys.
+// Returns null if we can't determine field-level changes (e.g. body section changed).
+// Exported for testing.
+export function detectChangedFields(patch: string): string[] | null {
+  const lines = patch.split('\n');
+  const changedKeys = new Set<string>();
+  let inFrontmatter = false;
+  let frontmatterStarted = false;
+  let inHunk = false;
+
+  for (const line of lines) {
+    if (line.startsWith('@@')) {
+      inHunk = true;
+      continue;
+    }
+    if (!inHunk) continue;
+
+    if (line === '---' || line === '+---') {
+      inFrontmatter = true;
+      frontmatterStarted = true;
+      continue;
+    }
+    if (inFrontmatter && (line === '---' || line === '+---' || line === ' ---')) {
+      inFrontmatter = false;
+      continue;
+    }
+
+    // Changes outside frontmatter (body section changes) mean we can't summarize to a field
+    if (
+      !inFrontmatter &&
+      frontmatterStarted &&
+      (line.startsWith('+') || line.startsWith('-')) &&
+      !line.startsWith('+++') &&
+      !line.startsWith('---')
+    ) {
+      return null;
+    }
+
+    if (
+      inFrontmatter &&
+      (line.startsWith('+') || line.startsWith('-')) &&
+      !line.startsWith('+++') &&
+      !line.startsWith('---')
+    ) {
+      const content = line.slice(1);
+      const keyMatch = /^([a-zA-Z_][a-zA-Z0-9_]*):\s/.exec(content);
+      if (keyMatch) {
+        changedKeys.add(keyMatch[1]);
+      }
+    }
+  }
+
+  return changedKeys.size > 0 ? [...changedKeys] : null;
+}
+
+// For a single modified file, try to detect which single field changed.
+// Returns field name if exactly one YAML frontmatter field changed, else null.
+function detectSingleFieldChange(filePath: string, cwd: string): string | null {
+  try {
+    // Limit patch size to avoid OOM on huge blobs
+    const patch = runGit(['diff', '--cached', '-p', '-U3', '--', filePath], cwd);
+    if (patch.length > 500_000) return null; // too large to parse safely
+
+    const fields = detectChangedFields(patch);
+    if (fields && fields.length === 1) return fields[0];
+    return null;
+  } catch {
+    return null;
   }
 }
 
@@ -31,18 +104,23 @@ export function readStagedDiff(repoDir: string): CommitSummary {
   const tables: Record<string, TableChange> = {};
   const schemaChanges: Record<string, 'added' | 'modified' | 'deleted'> = {};
 
+  // Collect raw file changes
+  const modifiedDataFiles: { table: string; slug: string; file: string }[] = [];
+
   for (const line of out.split('\n')) {
     if (!line.trim()) continue;
     const parts = line.split('\t');
     const status = parts[0];
     const file = parts[parts.length - 1];
 
-    // schema/<table>.sql or _schema/<table>.sql
     const schemaMatch = /^_?schema\/([^/]+)\.sql$/.exec(file);
     if (schemaMatch) {
       const table = schemaMatch[1];
-      schemaChanges[table] =
-        status.startsWith('A') ? 'added' : status.startsWith('D') ? 'deleted' : 'modified';
+      schemaChanges[table] = status.startsWith('A')
+        ? 'added'
+        : status.startsWith('D')
+          ? 'deleted'
+          : 'modified';
       continue;
     }
 
@@ -50,16 +128,37 @@ export function readStagedDiff(repoDir: string): CommitSummary {
     if (!dataMatch) continue;
     const [, table, fname] = dataMatch;
     if (fname === '_index.md') continue;
-    if (!fname.endsWith('.md')) continue; // ignore blob sidecars (counted via .md)
+    if (!fname.endsWith('.md')) continue;
 
     if (!tables[table]) tables[table] = { added: [], modified: [], deleted: [] };
     const entry = path.basename(fname, '.md');
     if (status.startsWith('A')) tables[table].added.push(entry);
     else if (status.startsWith('D')) tables[table].deleted.push(entry);
-    else tables[table].modified.push(entry);
+    else {
+      tables[table].modified.push(entry);
+      modifiedDataFiles.push({ table, slug: entry, file });
+    }
   }
 
-  return { tables, schemaChanges };
+  const summary: CommitSummary = { tables, schemaChanges };
+
+  // Attempt single-field detection when exactly one row file is modified and nothing else changed
+  const tableNames = Object.keys(tables);
+  if (
+    modifiedDataFiles.length === 1 &&
+    tableNames.length === 1 &&
+    tables[tableNames[0]].added.length === 0 &&
+    tables[tableNames[0]].deleted.length === 0 &&
+    Object.keys(schemaChanges).length === 0
+  ) {
+    const { table, slug, file } = modifiedDataFiles[0];
+    const field = detectSingleFieldChange(file, repoDir);
+    if (field) {
+      summary.fieldChange = { table, slug, field };
+    }
+  }
+
+  return summary;
 }
 
 function summarize(t: TableChange): string {
@@ -76,7 +175,6 @@ export function generateCommitMessage(summary: CommitSummary, template?: string)
 
   const lines: string[] = [];
 
-  // Schema changes get their own line(s) first
   for (const name of schemaNames) {
     lines.push(`schema(${name}): ${summary.schemaChanges[name]}`);
   }
@@ -85,7 +183,13 @@ export function generateCommitMessage(summary: CommitSummary, template?: string)
     return lines.join('\n');
   }
 
-  // Single-row, single-table edge case
+  // Single-field change: emit `data(table): modify slug.field`
+  if (summary.fieldChange && tableNames.length === 1 && schemaNames.length === 0) {
+    const { table, slug, field } = summary.fieldChange;
+    return `data(${table}): modify ${slug}.${field}`;
+  }
+
+  // Single-row edge cases
   if (tableNames.length === 1) {
     const name = tableNames[0];
     const ch = summary.tables[name];
@@ -104,7 +208,7 @@ export function generateCommitMessage(summary: CommitSummary, template?: string)
     }
   }
 
-  // Many tables, large change: summarize
+  // Large change across many tables: summarize
   const totalRows = tableNames.reduce((acc, t) => {
     const ch = summary.tables[t];
     return acc + ch.added.length + ch.modified.length + ch.deleted.length;

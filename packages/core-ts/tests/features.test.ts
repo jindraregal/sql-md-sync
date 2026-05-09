@@ -61,7 +61,7 @@ describe('block-scalar YAML (§4.4)', () => {
 
   it('uses block scalar for strings containing single-quote', () => {
     const md = rowToMarkdown({ id: 1, t: "it's a test" }, [], ['id', 't']);
-    expect(md).toContain("t: |-");
+    expect(md).toContain('t: |-');
   });
 
   it('uses block scalar for multiline strings in frontmatter', () => {
@@ -106,8 +106,12 @@ describe('block-scalar YAML (§4.4)', () => {
 describe('NULL body sections (§4.2)', () => {
   let tmpdir: string;
 
-  beforeEach(() => { tmpdir = tmp(); });
-  afterEach(() => { fs.rmSync(tmpdir, { recursive: true, force: true }); });
+  beforeEach(() => {
+    tmpdir = tmp();
+  });
+  afterEach(() => {
+    fs.rmSync(tmpdir, { recursive: true, force: true });
+  });
 
   it('writes <!-- null --> marker for null body column', () => {
     const md = rowToMarkdown({ id: 1, body: null }, ['body'], ['id', 'body']);
@@ -137,7 +141,10 @@ describe('NULL body sections (§4.2)', () => {
     await importMd({ md: out, out: outDb });
 
     const imported = new Database(outDb, { readonly: true });
-    const rows = imported.prepare('SELECT * FROM posts ORDER BY id').all() as Record<string, unknown>[];
+    const rows = imported.prepare('SELECT * FROM posts ORDER BY id').all() as Record<
+      string,
+      unknown
+    >[];
     expect(rows[0].body).toBe('x'.repeat(300));
     expect(rows[1].body).toBeNull();
     imported.close();
@@ -208,7 +215,8 @@ describe('unicode slug transliteration (§4.3)', () => {
       db.prepare('INSERT INTO people VALUES (?, ?)').run(1, 'Příliš žluťoučký kůň');
       db.close();
       await exportDb({ db: dbPath, out });
-      const files = fs.readdirSync(path.join(out, 'data', 'people'))
+      const files = fs
+        .readdirSync(path.join(out, 'data', 'people'))
         .filter((f) => f !== '_index.md');
       expect(files[0]).toMatch(/prilis-zlutoucky-kun/);
     } finally {
@@ -282,8 +290,12 @@ describe('padWidth (§4.3)', () => {
 describe('_schema column mapping (§4.2)', () => {
   let tmpdir: string;
 
-  beforeEach(() => { tmpdir = tmp(); });
-  afterEach(() => { fs.rmSync(tmpdir, { recursive: true, force: true }); });
+  beforeEach(() => {
+    tmpdir = tmp();
+  });
+  afterEach(() => {
+    fs.rmSync(tmpdir, { recursive: true, force: true });
+  });
 
   it('writes _schema/<table>.columns.json on export', async () => {
     const dbPath = path.join(tmpdir, 'src.db');
@@ -309,8 +321,12 @@ describe('_schema column mapping (§4.2)', () => {
 describe('round-trip idempotency (§5.3)', () => {
   let tmpdir: string;
 
-  beforeEach(() => { tmpdir = tmp(); });
-  afterEach(() => { fs.rmSync(tmpdir, { recursive: true, force: true }); });
+  beforeEach(() => {
+    tmpdir = tmp();
+  });
+  afterEach(() => {
+    fs.rmSync(tmpdir, { recursive: true, force: true });
+  });
 
   it('export → import → export produces zero diff on data/ and _schema/', async () => {
     const dbPath = path.join(tmpdir, 'src.db');
@@ -328,7 +344,12 @@ describe('round-trip idempotency (§5.3)', () => {
       )
     `);
     const longBio = 'Bio: Alice has been with the company since 2019.\n'.repeat(6);
-    db.prepare('INSERT INTO users VALUES (?, ?, ?, ?)').run(1, 'Alice', 'alice@example.com', longBio);
+    db.prepare('INSERT INTO users VALUES (?, ?, ?, ?)').run(
+      1,
+      'Alice',
+      'alice@example.com',
+      longBio
+    );
     db.prepare('INSERT INTO users VALUES (?, ?, ?, ?)').run(2, 'Bob', null, null);
     db.prepare('INSERT INTO users VALUES (?, ?, ?, ?)').run(
       3,

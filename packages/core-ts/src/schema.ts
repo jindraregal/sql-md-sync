@@ -27,20 +27,22 @@ export function getColumns(db: Database.Database, table: string): ColumnInfo[] {
 export function getPkColumn(db: Database.Database, table: string): string {
   const cols = getColumns(db, table);
   const pk = cols.find((c) => c.pk === 1);
-  return pk ? pk.name : cols[0]?.name ?? 'rowid';
+  return pk ? pk.name : (cols[0]?.name ?? 'rowid');
 }
 
 export function getIndexes(db: Database.Database, table: string): IndexInfo[] {
-  const indexList = db
-    .prepare(`PRAGMA index_list(${JSON.stringify(table)})`)
-    .all() as { name: string; unique: number; origin: string }[];
+  const indexList = db.prepare(`PRAGMA index_list(${JSON.stringify(table)})`).all() as {
+    name: string;
+    unique: number;
+    origin: string;
+  }[];
 
   return indexList
     .filter((i) => i.origin !== 'pk')
     .map((i) => {
-      const cols = db
-        .prepare(`PRAGMA index_info(${JSON.stringify(i.name)})`)
-        .all() as { name: string }[];
+      const cols = db.prepare(`PRAGMA index_info(${JSON.stringify(i.name)})`).all() as {
+        name: string;
+      }[];
       return {
         name: i.name,
         columns: cols.map((c) => c.name),
@@ -85,11 +87,7 @@ export interface ColumnMapping {
   excludeColumns?: string[];
 }
 
-export function writeColumnMapping(
-  outDir: string,
-  table: string,
-  mapping: ColumnMapping
-): void {
+export function writeColumnMapping(outDir: string, table: string, mapping: ColumnMapping): void {
   const schemaDir = path.join(outDir, '_schema');
   fs.mkdirSync(schemaDir, { recursive: true });
   fs.writeFileSync(

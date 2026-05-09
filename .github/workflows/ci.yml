@@ -10,6 +10,45 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    name: lint + format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install
+        run: npm ci --legacy-peer-deps
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Prettier
+        run: npm run format:check
+
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install
+        run: npm ci --legacy-peer-deps
+
+      - name: Typecheck
+        run: npm run typecheck
+
   test:
     name: test (node ${{ matrix.node }} on ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -29,16 +68,38 @@ jobs:
           cache: npm
 
       - name: Install
-        run: npm ci
-
-      - name: Typecheck
-        run: npm run lint
+        run: npm ci --legacy-peer-deps
 
       - name: Build
         run: npm run build
 
-      - name: Test
+      - name: Unit + integration tests
         run: npm test
+
+  coverage:
+    name: coverage (>= 85%)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install
+        run: npm ci --legacy-peer-deps
+
+      - name: Run coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: packages/core-ts/coverage/
+          retention-days: 14
 
   format-spec-frozen:
     name: format-spec must not change without version bump

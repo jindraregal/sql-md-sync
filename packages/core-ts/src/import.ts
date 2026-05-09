@@ -64,9 +64,7 @@ export async function importMd(opts: ImportOptions): Promise<void> {
       try {
         db.exec(createSql);
       } catch (e) {
-        throw new Error(
-          `Failed to create table ${table}: ${e instanceof Error ? e.message : e}`
-        );
+        throw new Error(`Failed to create table ${table}: ${e instanceof Error ? e.message : e}`);
       }
 
       const tableDir = path.join(dataDir, table);

@@ -20,7 +20,10 @@
   "scripts": {
     "build": "npm run build -w packages/core-ts",
     "test": "npm test -w packages/core-ts",
+    "test:coverage": "npm run test:coverage -w packages/core-ts",
+    "typecheck": "npm run typecheck -w packages/core-ts",
     "lint": "npm run lint -w packages/core-ts",
+    "format:check": "npm run format:check -w packages/core-ts",
     "dev": "npm run dev -w packages/core-ts"
   },
   "engines": {

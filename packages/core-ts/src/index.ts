@@ -21,5 +21,12 @@ export type { DiffOptions, DiffResult } from './diff.js';
 export type { InitOptions } from './init.js';
 export type { StatusOptions, StatusReport } from './status.js';
 export type { CommitSummary, TableChange } from './commit.js';
-export type { SyncConfig, TableConfig, ColumnInfo, IndexInfo, TableMeta, RowData } from './types.js';
+export type {
+  SyncConfig,
+  TableConfig,
+  ColumnInfo,
+  IndexInfo,
+  TableMeta,
+  RowData,
+} from './types.js';
 export type { ColumnMapping } from './schema.js';

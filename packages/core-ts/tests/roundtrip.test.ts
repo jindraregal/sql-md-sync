@@ -70,7 +70,10 @@ describe('round-trip: simple table', () => {
     await importMd({ md: mdDir, out: outDb });
 
     const imported = new Database(outDb, { readonly: true });
-    const rows = imported.prepare('SELECT * FROM items ORDER BY id').all() as Record<string, unknown>[];
+    const rows = imported.prepare('SELECT * FROM items ORDER BY id').all() as Record<
+      string,
+      unknown
+    >[];
     expect(rows[0].val).toBeNull();
     expect(rows[0].num).toBeNull();
     expect(rows[1].val).toBe('hello');
@@ -103,7 +106,8 @@ describe('round-trip: large text / body columns', () => {
 
     await exportDb({ db: srcDb, out: mdDir });
 
-    const rowFile = fs.readdirSync(path.join(mdDir, 'data', 'posts'))
+    const rowFile = fs
+      .readdirSync(path.join(mdDir, 'data', 'posts'))
       .find((f) => f !== '_index.md')!;
     const content = fs.readFileSync(path.join(mdDir, 'data', 'posts', rowFile), 'utf8');
 
@@ -167,7 +171,7 @@ describe('round-trip: special characters', () => {
   it('handles quotes and backticks in short strings', async () => {
     const db = new Database(srcDb);
     db.exec(`CREATE TABLE code (id INTEGER PRIMARY KEY, snippet TEXT)`);
-    db.prepare('INSERT INTO code VALUES (?, ?)').run(1, "it's a \"test\" with `backticks`");
+    db.prepare('INSERT INTO code VALUES (?, ?)').run(1, 'it\'s a "test" with `backticks`');
     db.close();
 
     await exportDb({ db: srcDb, out: mdDir });
@@ -175,7 +179,7 @@ describe('round-trip: special characters', () => {
 
     const imported = new Database(outDb, { readonly: true });
     const row = imported.prepare('SELECT * FROM code WHERE id=1').get() as Record<string, unknown>;
-    expect(row.snippet).toBe("it's a \"test\" with `backticks`");
+    expect(row.snippet).toBe('it\'s a "test" with `backticks`');
     imported.close();
   });
 
@@ -190,7 +194,10 @@ describe('round-trip: special characters', () => {
     await importMd({ md: mdDir, out: outDb });
 
     const imported = new Database(outDb, { readonly: true });
-    const row = imported.prepare('SELECT * FROM articles WHERE id=1').get() as Record<string, unknown>;
+    const row = imported.prepare('SELECT * FROM articles WHERE id=1').get() as Record<
+      string,
+      unknown
+    >;
     expect(row.content).toBe(text);
     imported.close();
   });
@@ -246,6 +253,49 @@ describe('validate command', () => {
     const result = validate(mdDir);
     expect(result.valid).toBe(false);
     expect(result.errors.some((e) => e.includes('rowCount') || e.includes('rows'))).toBe(true);
+  });
+
+  it('warns when _index.md is missing', async () => {
+    const db = new Database(srcDb);
+    db.exec(`CREATE TABLE t (id INTEGER PRIMARY KEY, name TEXT)`);
+    db.prepare('INSERT INTO t VALUES (?, ?)').run(1, 'Alice');
+    db.close();
+
+    await exportDb({ db: srcDb, out: mdDir });
+    fs.unlinkSync(path.join(mdDir, 'data', 't', '_index.md'));
+
+    const result = validate(mdDir);
+    expect(result.warnings.some((w) => w.includes('_index.md'))).toBe(true);
+  });
+
+  it('warns on data dir with no schema', async () => {
+    const db = new Database(srcDb);
+    db.exec(`CREATE TABLE t (id INTEGER PRIMARY KEY, name TEXT)`);
+    db.prepare('INSERT INTO t VALUES (?, ?)').run(1, 'Alice');
+    db.close();
+
+    await exportDb({ db: srcDb, out: mdDir });
+    fs.mkdirSync(path.join(mdDir, 'data', 'orphan_table'), { recursive: true });
+
+    const result = validate(mdDir);
+    expect(result.warnings.some((w) => w.includes('orphan_table'))).toBe(true);
+  });
+
+  it('warns when schema fingerprint differs', async () => {
+    const db = new Database(srcDb);
+    db.exec(`CREATE TABLE t (id INTEGER PRIMARY KEY, name TEXT)`);
+    db.prepare('INSERT INTO t VALUES (?, ?)').run(1, 'Alice');
+    db.close();
+
+    await exportDb({ db: srcDb, out: mdDir });
+
+    // Tamper schema file to cause fingerprint mismatch
+    const schemaFile = path.join(mdDir, '_schema', 't.sql');
+    const original = fs.readFileSync(schemaFile, 'utf8');
+    fs.writeFileSync(schemaFile, original + ' -- extra');
+
+    const result = validate(mdDir);
+    expect(result.warnings.some((w) => w.includes('fingerprint'))).toBe(true);
   });
 });
 

@@ -84,9 +84,7 @@ describe('export is idempotent', () => {
     db.close();
 
     await exportDb({ db: dbPath, out });
-    const files = fs
-      .readdirSync(path.join(out, 'data', 't'))
-      .filter((f) => f !== '_index.md');
+    const files = fs.readdirSync(path.join(out, 'data', 't')).filter((f) => f !== '_index.md');
     const content = fs.readFileSync(path.join(out, 'data', 't', files[0]), 'utf8');
 
     // Order of frontmatter keys: id, zeta, alpha, mu (schema order)

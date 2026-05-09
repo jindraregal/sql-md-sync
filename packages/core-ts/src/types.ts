@@ -2,6 +2,7 @@ export interface TableConfig {
   pk: string;
   bodyColumns: string[];
   displayColumn?: string;
+  largeTextThreshold?: number;
   excludeColumns?: string[];
 }
 
@@ -17,6 +18,25 @@ export interface SyncConfig {
   schemaDir?: string;
   blobEncoding?: BlobEncoding;
   commitTemplate?: string;
+}
+
+// Raw JSON shape (snake_case, as stored on disk)
+export interface RawTableConfig {
+  body_columns?: string[];
+  display_column?: string;
+  large_text_threshold?: number;
+  exclude_columns?: string[];
+}
+
+export interface RawSyncConfig {
+  version: number;
+  db_path?: string;
+  data_dir?: string;
+  schema_dir?: string;
+  tables?: Record<string, RawTableConfig>;
+  blob_encoding?: BlobEncoding;
+  commit_template?: string;
+  schema_fingerprint?: string;
 }
 
 export interface ColumnInfo {

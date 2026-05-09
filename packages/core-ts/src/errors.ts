@@ -18,8 +18,7 @@ export class EncodingError extends SqlMdSyncError {
     public readonly file?: string,
     public readonly column?: string
   ) {
-    const ctx =
-      file || column ? ` (${[file, column].filter(Boolean).join(':')})` : '';
+    const ctx = file || column ? ` (${[file, column].filter(Boolean).join(':')})` : '';
     super(message + ctx);
     this.name = 'EncodingError';
   }

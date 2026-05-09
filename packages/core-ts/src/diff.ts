@@ -2,13 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import Database from 'better-sqlite3';
 import { readConfig } from './config.js';
-import { readSchemaFiles } from './schema.js';
-import { markdownToRow } from './serialize.js';
-import { rowToMarkdown } from './serialize.js';
-import { getTableNames, getColumns, getPkColumn } from './schema.js';
-import { detectBodyColumns } from './serialize.js';
+import { readSchemaFiles, getPkColumn } from './schema.js';
+import { markdownToRow, rowToMarkdown } from './serialize.js';
 import type { RowData } from './types.js';
-import matter from 'gray-matter';
 
 export interface DiffOptions {
   md: string;
@@ -45,7 +41,7 @@ export async function diff(opts: DiffOptions): Promise<DiffResult[]> {
 
   for (const table of Object.keys(schemas)) {
     const tableConfig = config.tables[table];
-    const pkCol = tableConfig?.pk ?? getPkColumn(db, table);
+    const pkCol = getPkColumn(db, table);
     const bodyColumns = tableConfig?.bodyColumns ?? [];
 
     // Current DB rows

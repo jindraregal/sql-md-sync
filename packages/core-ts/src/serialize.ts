@@ -121,11 +121,7 @@ function unescapeBodyLine(line: string): string {
   return m ? `# ${m[1]}` : line;
 }
 
-function orderFrontmatterKeys(
-  row: RowData,
-  columnOrder: string[],
-  bodySet: Set<string>
-): string[] {
+function orderFrontmatterKeys(row: RowData, columnOrder: string[], bodySet: Set<string>): string[] {
   const seen = new Set<string>();
   const keys: string[] = [];
   for (const col of columnOrder) {
@@ -169,11 +165,7 @@ export function detectBodyColumns(
   return columns.map((c) => c.name).filter((n) => body.has(n));
 }
 
-export function rowToMarkdown(
-  row: RowData,
-  bodyColumns: string[],
-  columnOrder?: string[]
-): string {
+export function rowToMarkdown(row: RowData, bodyColumns: string[], columnOrder?: string[]): string {
   const bodySet = new Set(bodyColumns);
   const order = columnOrder ?? Object.keys(row);
   const fmKeys = orderFrontmatterKeys(row, order, bodySet);

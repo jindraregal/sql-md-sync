@@ -155,9 +155,7 @@ export async function validateRoundTrip(mdDir: string): Promise<RoundTripResult>
   }
 
   if (result.tableMismatches.length > 0) {
-    result.errors.push(
-      `Round-trip produced ${result.tableMismatches.length} file difference(s)`
-    );
+    result.errors.push(`Round-trip produced ${result.tableMismatches.length} file difference(s)`);
   }
   result.valid = result.errors.length === 0;
   return result;
