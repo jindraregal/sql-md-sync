@@ -12,6 +12,8 @@
 
 `sql-md-sync` exists to give AI-built applications a single source of truth that is both human-readable and machine-queryable. AI agents frequently generate and mutate structured data in SQLite; without this tool that data lives in an opaque binary that no reviewer can audit and no Git workflow can protect. By projecting every row as a committed Markdown file, the schema and data become the canonical artifact, not just a runtime detail. A pre-commit hook or CI step validates the projection before anything reaches `main`, so the repository is always in a provably consistent state.
 
+The Markdown projection also makes the data **legible to language models**. A `sqlite3 .dump` produces one massive block of `INSERT` statements with no structure an LLM can navigate; a Markdown tree gives each record its own file with named fields and prose-formatted text columns, so an AI agent can read, reason about, and edit individual rows without needing SQL tooling or context about the entire database at once.
+
 ## Feature support
 
 | Feature | Supported | Notes |
@@ -122,6 +124,24 @@ sql-md-sync commit --stage
 ```
 
 The round-trip flag rebuilds a temp database, re-exports it, and diffs against the committed Markdown. Any mismatch fails the job.
+
+## Sync behavior
+
+**Export is incremental.** `sql-md-sync export` uses a smart-merge strategy: it renders the full projection into a temp directory, then compares file hashes against the existing tree. Only files whose content changed are written; files whose rows were deleted are removed. On a 10k-row database where 20 rows changed, only ~20 files are touched on disk.
+
+**Import is a full rebuild.** `sql-md-sync import` always creates a fresh SQLite database in a temp file, inserts every row from the Markdown tree in a single transaction, then atomically renames the temp file into place. There is no row-level diffing on import. This keeps the code simple and guarantees consistency, at the cost of O(n) work regardless of how many rows changed.
+
+### Performance vs `sqlite3 .dump`
+
+| Operation | `sqlite3 .dump` + restore | `sql-md-sync` |
+|---|---|---|
+| First export | fast (one sequential write) | slower (one file per row) |
+| Subsequent export | always full rewrite | fast (only changed rows written) |
+| Import | fast (batch SQL replay) | comparable (batched INSERT transaction) |
+| Diff a change | noisy (line in a giant file) | clean (single row file changes) |
+| LLM / AI readability | poor (raw SQL) | good (named fields, prose columns) |
+
+For databases up to ~100k rows the per-file overhead is negligible. Above that, export time grows with row count; consider batching exports or scoping to changed tables.
 
 ## Comparison
 
