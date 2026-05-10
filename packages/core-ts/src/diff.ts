@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import Database from 'better-sqlite3';
 import { readConfig } from './config.js';
-import { readSchemaFiles, getPkColumn } from './schema.js';
+import { readSchemaFiles, getPkColumn, getColumns } from './schema.js';
 import { markdownToRow, rowToMarkdown } from './serialize.js';
 import type { RowData } from './types.js';
 
@@ -43,6 +43,10 @@ export async function diff(opts: DiffOptions): Promise<DiffResult[]> {
     const tableConfig = config.tables[table];
     const pkCol = getPkColumn(db, table);
     const bodyColumns = tableConfig?.bodyColumns ?? [];
+    // Canonical column order from the schema. Without it, mdRow keys (YAML
+    // emit order) and dbRow keys (sqlite_master order) can differ and make
+    // identical rows look "changed" after serialization.
+    const columnOrder = getColumns(db, table).map((c) => c.name);
 
     // Current DB rows
     const dbRows = db.prepare(`SELECT * FROM "${table}"`).all() as RowData[];
@@ -77,8 +81,8 @@ export async function diff(opts: DiffOptions): Promise<DiffResult[]> {
       } else {
         const dbRow = dbByPk.get(pk)!;
         // Compare serialized forms
-        const mdSerialized = rowToMarkdown(mdRow, bodyColumns);
-        const dbSerialized = rowToMarkdown(dbRow, bodyColumns);
+        const mdSerialized = rowToMarkdown(mdRow, bodyColumns, columnOrder);
+        const dbSerialized = rowToMarkdown(dbRow, bodyColumns, columnOrder);
         if (mdSerialized !== dbSerialized) {
           changed.push({ pk, from: dbRow, to: mdRow });
         }
