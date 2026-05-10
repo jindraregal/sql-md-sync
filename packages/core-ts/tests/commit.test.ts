@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import { generateCommitMessage, detectChangedFields } from '../src/commit.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { execSync } from 'child_process';
+import { generateCommitMessage, detectChangedFields, readStagedDiff } from '../src/commit.js';
 
 describe('generateCommitMessage', () => {
   it('formats single table with mixed changes', () => {
@@ -147,5 +151,80 @@ describe('detectChangedFields', () => {
     ].join('\n');
     const result = detectChangedFields(patch);
     expect(result).toBeNull();
+  });
+
+  it('handles a real git diff hunk where context lines have a space prefix', () => {
+    // This is the shape `git diff --cached -p -U3` actually emits: every
+    // unchanged line, including the `---` frontmatter delimiters, gets a
+    // leading space.
+    const patch = [
+      'diff --git a/data/users/0001-alice.md b/data/users/0001-alice.md',
+      'index 0000001..0000002 100644',
+      '--- a/data/users/0001-alice.md',
+      '+++ b/data/users/0001-alice.md',
+      '@@ -1,5 +1,5 @@',
+      ' ---',
+      ' id: 1',
+      '-email: alice@old.com',
+      '+email: alice@new.com',
+      ' name: Alice',
+      ' ---',
+    ].join('\n');
+    const fields = detectChangedFields(patch);
+    expect(fields).toEqual(['email']);
+  });
+
+  it('detects field changes even when only frontmatter delimiters use the space prefix', () => {
+    const patch = [
+      '@@ -1,6 +1,6 @@',
+      ' ---',
+      ' id: 1',
+      '-status: draft',
+      '+status: published',
+      '-priority: 1',
+      '+priority: 2',
+      ' ---',
+    ].join('\n');
+    const fields = detectChangedFields(patch);
+    expect(fields).toContain('status');
+    expect(fields).toContain('priority');
+    expect(fields!.length).toBe(2);
+  });
+});
+
+describe('readStagedDiff: single field change end-to-end', () => {
+  let repo: string;
+
+  beforeEach(() => {
+    repo = fs.mkdtempSync(path.join(os.tmpdir(), 'sql-md-sync-commit-e2e-'));
+    execSync('git init -q', { cwd: repo });
+    execSync('git config user.email test@example.com', { cwd: repo });
+    execSync('git config user.name Test', { cwd: repo });
+    fs.mkdirSync(path.join(repo, 'data', 'users'), { recursive: true });
+  });
+
+  afterEach(() => {
+    fs.rmSync(repo, { recursive: true, force: true });
+  });
+
+  it('produces fieldChange when one frontmatter key is edited in one file', () => {
+    const file = path.join(repo, 'data', 'users', '0001-alice.md');
+    fs.writeFileSync(
+      file,
+      ['---', 'id: 1', 'name: Alice', 'email: alice@old.com', '---', ''].join('\n')
+    );
+    execSync('git add .', { cwd: repo });
+    execSync('git commit -q -m initial', { cwd: repo });
+
+    fs.writeFileSync(
+      file,
+      ['---', 'id: 1', 'name: Alice', 'email: alice@new.com', '---', ''].join('\n')
+    );
+    execSync('git add .', { cwd: repo });
+
+    const summary = readStagedDiff(repo);
+    expect(summary.fieldChange).toEqual({ table: 'users', slug: '0001-alice', field: 'email' });
+    const msg = generateCommitMessage(summary);
+    expect(msg).toBe('data(users): modify 0001-alice.email');
   });
 });
