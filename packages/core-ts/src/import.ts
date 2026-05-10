@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import Database from 'better-sqlite3';
-import { readConfig } from './config.js';
+import { readConfig, fingerprintSchema } from './config.js';
 import { readSchemaFiles } from './schema.js';
 import { markdownToRow } from './serialize.js';
 import matter from 'gray-matter';
@@ -49,6 +49,28 @@ export async function importMd(opts: ImportOptions): Promise<void> {
   }
 
   const schemas = readSchemaFiles(mdDir);
+
+  // Schema fingerprint guard: refuse to import when the on-disk _schema/ files
+  // hash differently from what the config recorded at last export, unless the
+  // caller explicitly opts in with --force. This catches hand-edited schema
+  // files and stale trees before they overwrite the destination DB.
+  if (config.schemaFingerprint) {
+    const combined = Object.values(schemas).join('');
+    const fp = fingerprintSchema(combined);
+    if (fp !== config.schemaFingerprint) {
+      if (!force) {
+        throw new Error(
+          `Schema fingerprint mismatch: _schema/ files hash to ${fp.slice(0, 16)} ` +
+            `but .sqlmdsync.json expects ${config.schemaFingerprint.slice(0, 16)}. ` +
+            `Re-export the database, or re-run with --force to import anyway.`
+        );
+      }
+      console.warn(
+        `Warning: schema fingerprint mismatch (got ${fp.slice(0, 16)}, expected ${config.schemaFingerprint.slice(0, 16)}); --force given, continuing.`
+      );
+    }
+  }
+
   const dataDir = path.join(mdDir, 'data');
 
   // Atomic swap: build new db at tmp path, rename on success
