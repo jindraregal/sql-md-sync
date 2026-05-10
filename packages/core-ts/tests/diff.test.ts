@@ -134,6 +134,40 @@ describe('formatDiff', () => {
   });
 });
 
+describe('diff: row with permuted frontmatter keys is not "changed"', () => {
+  let tmpdir: string;
+  let srcDb: string;
+  let mdDir: string;
+
+  beforeEach(() => {
+    tmpdir = tmpDir();
+    srcDb = path.join(tmpdir, 'src.db');
+    mdDir = path.join(tmpdir, 'md');
+  });
+  afterEach(() => cleanUp(tmpdir));
+
+  it('treats rows with the same content but different YAML key order as identical', async () => {
+    const db = new Database(srcDb);
+    db.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT)`);
+    db.prepare('INSERT INTO users VALUES (?, ?, ?)').run(1, 'Alice', 'alice@example.com');
+    db.close();
+
+    await exportDb({ db: srcDb, out: mdDir });
+
+    // Rewrite the row file with frontmatter keys in a different (non-schema) order.
+    // Same content, but `email` comes before `name`, and `name` before `id`.
+    const tableDir = path.join(mdDir, 'data', 'users');
+    const rowFile = fs.readdirSync(tableDir).find((f) => f !== '_index.md')!;
+    const reordered = ['---', 'email: alice@example.com', 'name: Alice', 'id: 1', '---', ''].join(
+      '\n'
+    );
+    fs.writeFileSync(path.join(tableDir, rowFile), reordered);
+
+    const results = await diff({ md: mdDir, db: srcDb });
+    expect(results).toHaveLength(0);
+  });
+});
+
 describe('diff: throws on missing config', () => {
   let tmpdir: string;
   let srcDb: string;

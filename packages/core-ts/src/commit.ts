@@ -45,34 +45,34 @@ export function detectChangedFields(patch: string): string[] | null {
     }
     if (!inHunk) continue;
 
-    if (line === '---' || line === '+---') {
-      inFrontmatter = true;
-      frontmatterStarted = true;
-      continue;
+    // Strip the unified-diff line prefix (' ', '+', '-') before comparing.
+    // Real `git diff` output prefixes context lines with a single space, so
+    // an unchanged frontmatter delimiter shows up as ` ---`, not `---`.
+    let prefix = '';
+    let content = line;
+    if (line.length > 0 && (line[0] === ' ' || line[0] === '+' || line[0] === '-')) {
+      prefix = line[0];
+      content = line.slice(1);
     }
-    if (inFrontmatter && (line === '---' || line === '+---' || line === ' ---')) {
-      inFrontmatter = false;
+
+    // Frontmatter delimiter: bare `---` (some patch generators omit the
+    // context-line space) or any prefixed form (` ---`, `+---`, `----`).
+    if (line === '---' || (prefix !== '' && content === '---')) {
+      if (!frontmatterStarted) {
+        inFrontmatter = true;
+        frontmatterStarted = true;
+      } else {
+        inFrontmatter = false;
+      }
       continue;
     }
 
     // Changes outside frontmatter (body section changes) mean we can't summarize to a field
-    if (
-      !inFrontmatter &&
-      frontmatterStarted &&
-      (line.startsWith('+') || line.startsWith('-')) &&
-      !line.startsWith('+++') &&
-      !line.startsWith('---')
-    ) {
+    if (!inFrontmatter && frontmatterStarted && (prefix === '+' || prefix === '-')) {
       return null;
     }
 
-    if (
-      inFrontmatter &&
-      (line.startsWith('+') || line.startsWith('-')) &&
-      !line.startsWith('+++') &&
-      !line.startsWith('---')
-    ) {
-      const content = line.slice(1);
+    if (inFrontmatter && (prefix === '+' || prefix === '-')) {
       const keyMatch = /^([a-zA-Z_][a-zA-Z0-9_]*):\s/.exec(content);
       if (keyMatch) {
         changedKeys.add(keyMatch[1]);

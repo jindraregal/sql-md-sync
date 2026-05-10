@@ -71,10 +71,14 @@ export function readSchemaFiles(outDir: string): Record<string, string> {
     throw new Error(`Missing _schema/ directory in ${outDir}`);
   }
   const result: Record<string, string> = {};
-  for (const f of fs.readdirSync(schemaDir)) {
+  // Sort so iteration order matches writeSchemaFiles (alphabetical), which
+  // keeps the schema fingerprint deterministic across filesystems.
+  for (const f of fs.readdirSync(schemaDir).sort()) {
     if (!f.endsWith('.sql')) continue;
     const table = f.replace(/\.sql$/, '');
-    result[table] = fs.readFileSync(path.join(schemaDir, f), 'utf8').trim();
+    // Read raw file bytes; do not trim. writeSchemaFiles wrote `sql + ';\n'`
+    // and the fingerprint is computed over that exact content joined.
+    result[table] = fs.readFileSync(path.join(schemaDir, f), 'utf8');
   }
   return result;
 }

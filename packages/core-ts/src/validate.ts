@@ -40,11 +40,11 @@ export function validate(mdDir: string): ValidationResult {
     return { valid: false, errors, warnings };
   }
 
-  // Schema fingerprint check
+  // Schema fingerprint check. readSchemaFiles returns raw file content, so
+  // joining the values reconstructs the same string that writeSchemaFiles
+  // hashed at export time (sorted by table name).
   if (config.schemaFingerprint) {
-    const combined = Object.values(schemas)
-      .map((s) => s.trim() + ';\n')
-      .join('');
+    const combined = Object.values(schemas).join('');
     const fp = fingerprintSchema(combined);
     if (fp !== config.schemaFingerprint) {
       warnings.push(

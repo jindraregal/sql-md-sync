@@ -74,9 +74,73 @@ describe('install-hook command', () => {
     expect(content).toContain('sql-md-sync export');
   });
 
-  it('throws when hook already has sql-md-sync', async () => {
+  it('is idempotent: re-running with the same db is a no-op', async () => {
     await init({ dir: tmpdir, dbPath: './test.db' });
     installHook({ dir: tmpdir });
-    expect(() => installHook({ dir: tmpdir })).toThrow('already contains sql-md-sync');
+    const hookFile = path.join(tmpdir, '.git', 'hooks', 'pre-commit');
+    const first = fs.readFileSync(hookFile, 'utf8');
+    installHook({ dir: tmpdir });
+    const second = fs.readFileSync(hookFile, 'utf8');
+    expect(second).toBe(first);
+    // The managed block must appear exactly once.
+    expect(second.match(/>>> sql-md-sync hook >>>/g)?.length).toBe(1);
+  });
+
+  it('replaces the managed block when re-run with a different db path', async () => {
+    await init({ dir: tmpdir, dbPath: './first.db' });
+    installHook({ dir: tmpdir });
+    installHook({ dir: tmpdir, db: './second.db' });
+    const hookFile = path.join(tmpdir, '.git', 'hooks', 'pre-commit');
+    const content = fs.readFileSync(hookFile, 'utf8');
+    expect(content).toContain('second.db');
+    expect(content).not.toContain('first.db');
+    // Sentinel pair must appear exactly once.
+    expect(content.match(/>>> sql-md-sync hook >>>/g)?.length).toBe(1);
+    expect(content.match(/<<< sql-md-sync hook <<</g)?.length).toBe(1);
+  });
+
+  it('preserves user content around the managed block when updating', async () => {
+    await init({ dir: tmpdir, dbPath: './test.db' });
+    installHook({ dir: tmpdir });
+    const hookFile = path.join(tmpdir, '.git', 'hooks', 'pre-commit');
+    const original = fs.readFileSync(hookFile, 'utf8');
+    // Add user lines before and after the managed block
+    const augmented = original.replace(
+      '# >>> sql-md-sync hook >>>',
+      'echo "user-before"\n# >>> sql-md-sync hook >>>'
+    );
+    fs.writeFileSync(hookFile, augmented + 'echo "user-after"\n');
+
+    installHook({ dir: tmpdir, db: './updated.db' });
+    const after = fs.readFileSync(hookFile, 'utf8');
+    expect(after).toContain('echo "user-before"');
+    expect(after).toContain('echo "user-after"');
+    expect(after).toContain('updated.db');
+  });
+
+  it('migrates a legacy (no-sentinel) snippet on next install', async () => {
+    await init({ dir: tmpdir, dbPath: './test.db' });
+    const hookFile = path.join(tmpdir, '.git', 'hooks', 'pre-commit');
+    fs.mkdirSync(path.dirname(hookFile), { recursive: true });
+    // Reproduce exactly what v0.1.1 wrote
+    fs.writeFileSync(
+      hookFile,
+      [
+        '#!/bin/sh',
+        'set -e',
+        '# sql-md-sync: export db before each commit',
+        'npx --yes sql-md-sync export --db "./test.db" --out .',
+        'git add data/ _schema/ .sqlmdsync.json',
+        '',
+      ].join('\n')
+    );
+
+    installHook({ dir: tmpdir });
+    const content = fs.readFileSync(hookFile, 'utf8');
+    expect(content).toContain('# >>> sql-md-sync hook >>>');
+    // Legacy comment must be gone (no duplicate snippets left behind)
+    expect(content).not.toContain('# sql-md-sync: export db before each commit');
+    // Only one npx export line remains
+    expect(content.match(/npx --yes sql-md-sync export/g)?.length).toBe(1);
   });
 });

@@ -28,10 +28,8 @@ export async function status(opts: StatusOptions): Promise<StatusReport> {
   let fingerprintMatch = true;
   try {
     const schemas = readSchemaFiles(md);
-    const combined = Object.values(schemas)
-      .map((s) => s.trim() + ';\n')
-      .join('');
-    const fp = fingerprintSchema(combined.replace(/;\n;\n/g, ';\n'));
+    const combined = Object.values(schemas).join('');
+    const fp = fingerprintSchema(combined);
     fingerprintMatch = !config.schemaFingerprint || fp === config.schemaFingerprint;
   } catch {
     fingerprintMatch = false;
