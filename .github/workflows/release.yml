@@ -33,19 +33,16 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Create version PR
+      - name: Create version PR or publish
         id: changesets
         uses: changesets/action@v1
         with:
           version: npx changeset version
+          publish: npx changeset publish
           commit: 'chore(release): version packages'
           title: 'chore(release): version packages'
+          createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish to npm
-        if: steps.changesets.outputs.hasChangesets == 'false'
-        run: npx changeset publish
-        env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_ACCESS: public
